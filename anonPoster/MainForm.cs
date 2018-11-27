@@ -519,10 +519,9 @@ namespace anonPoster {
         void UpdateCoverMenu(string track) {
             bool menuExists = CoverBox.ContextMenu != null;
 
-            /*
             if (menuExists && CoverBox.ContextMenu.MenuItems[0].Text == track)
                 return;
-                */
+
             if (Properties.Settings.Default.warnAboutTrackChange)
                 TrayIcon.ShowBalloonTip(0, null, track, ToolTipIcon.Info);
 
