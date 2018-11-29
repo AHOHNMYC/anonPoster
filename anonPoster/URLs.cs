@@ -6,6 +6,7 @@
         public const string youTube         = "https://www.youtube.com/channel/UCh4B8kA4xl7KS4TTgRHIePA/videos";
 
         public const string radio           = "https://anon.fm";
+        public const string radioSong       = radio + "/song/";
         public const string radioState      = radio + "/state.txt";
         public const string radioFeedback   = radio + "/feedback";
 

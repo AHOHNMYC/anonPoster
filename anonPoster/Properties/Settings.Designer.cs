@@ -130,5 +130,17 @@ namespace anonPoster.Properties {
                 this["warnAboutTrackChange"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool doChmo {
+            get {
+                return ((bool)(this["doChmo"]));
+            }
+            set {
+                this["doChmo"] = value;
+            }
+        }
     }
 }

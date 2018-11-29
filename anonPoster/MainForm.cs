@@ -1,4 +1,6 @@
-﻿using System;
+﻿// USE_CHMO — символ условной компиляции, позволяет чмориться :з
+
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -7,6 +9,7 @@ using System.Net;
 using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
+
 
 namespace anonPoster {
     public partial class MainForm : Form {
@@ -29,6 +32,9 @@ namespace anonPoster {
         int lastCover;
         ToolTip coverTt = new ToolTip { IsBalloon = true };
         bool wasLive;
+#if USE_CHMO
+        Chmo mainChmo = new Chmo();
+#endif
 
         void Recolor(Color backColorIn, Color foreColorIn) {
             Properties.Settings.Default.foreColor = foreColorIn;
@@ -103,6 +109,12 @@ namespace anonPoster {
                     GlobHotkey();
                 }),
                 */
+#if USE_CHMO
+                new MenuItem("Чморить", (s, e) => {
+                    ((MenuItem)s).Checked = Properties.Settings.Default.doChmo = !Properties.Settings.Default.doChmo;
+                    Properties.Settings.Default.Save();
+                }) { Checked = Properties.Settings.Default.doChmo },
+#endif
                 new MenuItem("Следить за видимом", (s, e) => {
                     if (Properties.Settings.Default.watchVidimo = ((MenuItem)s).Checked = streamTestTimer.Enabled = !streamTestTimer.Enabled)
                         TestStream();
@@ -297,6 +309,19 @@ namespace anonPoster {
                 KukarekBox.Focus();
                 return false;
             }
+
+#if USE_CHMO
+            if (Properties.Settings.Default.doChmo) {
+                string[] chmoResult = mainChmo.CheckString(KukarekBox.Text);
+                if (chmoResult.Length > 0) {
+                    string question = $"Мы обнаружили у вас странные слова:\n\n{string.Join(", ", chmoResult)}\n\nЖелаете вернуться к редактированию сообщения и исправить их?";
+                    if (DialogResult.Yes == MessageBox.Show(question, null, MessageBoxButtons.YesNo, MessageBoxIcon.Question)) {
+                        KukarekBox.Focus();
+                        return false;
+                    }
+                }
+            }
+#endif
 
             if (!Properties.Settings.Default.useGodGrace) {
                 // Check captcha value. Have to be 5 digits
@@ -519,23 +544,27 @@ namespace anonPoster {
         void UpdateCoverMenu(string track) {
             bool menuExists = CoverBox.ContextMenu != null;
 
-            if (menuExists && CoverBox.ContextMenu.MenuItems[0].Text == track)
+            if (menuExists && CoverBox.ContextMenu.MenuItems[0].Text.Substring(4) == track)
                 return;
 
             if (Properties.Settings.Default.warnAboutTrackChange)
                 TrayIcon.ShowBalloonTip(0, null, track, ToolTipIcon.Info);
 
-            int newMenuLength = 1;
-            if (menuExists) newMenuLength = (CoverBox.ContextMenu.MenuItems.Count < 10)
+            int newMenuLength = 3;
+            // 12 — 10 треков + разделитель + /song/
+            if (menuExists) newMenuLength = (CoverBox.ContextMenu.MenuItems.Count < 12)
                     ? CoverBox.ContextMenu.MenuItems.Count + 1
-                    : 10;
+                    : 12;
 
             MenuItem[] mi = new MenuItem[newMenuLength];
             mi[0] = new MenuItem($" 0. {track}", OpenGoogleTrackSearch);
-            for (int i = 1; i < newMenuLength; i++) {
+            for (int i = 1; i < newMenuLength-2; i++) {
                 mi[i] = CoverBox.ContextMenu.MenuItems[i - 1];
                 mi[i].Text = $"-{i}. {mi[i].Text.Substring(4)}";
             }
+
+            mi[newMenuLength - 2] = new MenuItem("-");
+            mi[newMenuLength - 1] = new MenuItem("Попробовать /song/ =>", (s, e) => Process.Start(URLs.radioSong));
 
             CoverBox.ContextMenu = new ContextMenu(mi);
         }
