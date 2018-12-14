@@ -99,7 +99,7 @@ namespace anonPoster {
             CheckEditCmd(MPC, stream);
         }
         void StartRecording(string stream) {
-            CheckEditCmd(ffmpeg, $" -i {stream} -c copy \"{GetFolderPath(SpecialFolder.Desktop)}\\anon.fm {DateTime.Now}.mkv\"");
+            CheckEditCmd(ffmpeg, $"-hide_banner -i {stream} -c copy \"{GetFolderPath(SpecialFolder.Desktop)}\\anon.fm {DateTime.Now:yyyy.MM.dd hh.mm.ss}.mkv\"");
         }
 
         private void mpv1_Click(object s, EventArgs e) {StartMPV(link1.Text);}

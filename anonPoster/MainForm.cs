@@ -1,11 +1,12 @@
 ﻿// USE_CHMO — символ условной компиляции, позволяет чмориться :з
 
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Security.Permissions;
 using System.Text;
 using System.Windows.Forms;
@@ -13,28 +14,30 @@ using System.Windows.Forms;
 
 namespace anonPoster {
     public partial class MainForm : Form {
-        // Constatns
-#if DEBUG
-        private const int STREAM_TIMER_RESOLUTION = 10000;
-#else
-        private const int STREAM_TIMER_RESOLUTION = 42000;
-#endif
-        private const int RADIO_TIMER_RESOLUTION = STREAM_TIMER_RESOLUTION;
-
         // Global variables
         int CaptchaID;  // updates by ReloadCaptcha()
-        Streams streamsForm;
         Image captchaOrig;
-        bool isStream = false;
-        Timer streamTestTimer;
-        Timer radioTestTimer;
         Random mainRandom = new Random();
-        int lastCover;
-        ToolTip coverTt = new ToolTip { IsBalloon = true };
-        bool wasLive;
 #if USE_CHMO
         Chmo mainChmo = new Chmo();
 #endif
+        WebClient captchaWC = new WebClient();
+        WebClient postWC = new WebClient();
+        bool hunspellLoaded = false;
+
+        Form NYForm = new NY();
+
+        public LastTracksMenu ltm;
+        public RadioWatcher rw;
+        public VideoWatcher vw;
+        public Streams streamsForm;
+        public ToolTip coverTt = new ToolTip { IsBalloon = true };
+
+        
+        enum spellCheckers {
+            chmo,
+            hunspell
+        }
 
         void Recolor(Color backColorIn, Color foreColorIn) {
             Properties.Settings.Default.foreColor = foreColorIn;
@@ -46,10 +49,17 @@ namespace anonPoster {
             ForeColor = KukarekBox.ForeColor = CaptchaAnswer.ForeColor = Properties.Settings.Default.foreColor;
             BackColor = KukarekBox.BackColor = CaptchaAnswer.BackColor = Properties.Settings.Default.backColor;
             ColorizeCaptcha();
+            HunspellCheckText();
         }
 
 
         public MainForm() {
+            if (Program.startInBackground || Properties.Settings.Default.startInBackground)
+                System.Threading.SynchronizationContext.Current.Post((obj) => {
+                    Visible = false;
+                }, null);
+
+
             InitializeComponent();
         }
 
@@ -59,11 +69,12 @@ namespace anonPoster {
 
         void ToggleMenuRadiobutton(object s) {
             foreach (MenuItem m in ((MenuItem)s).Parent.MenuItems)
-                m.Checked = false;
+                if (m.RadioCheck)
+                    m.Checked = false;
             ((MenuItem)s).Checked = true;
         }
 
-        void ShowStreamsForm() {
+        public void ShowStreamsForm() {
             if (streamsForm == null) {
                 streamsForm = new Streams(this) { Font = Font, Icon = Icon };
             }
@@ -72,12 +83,27 @@ namespace anonPoster {
         }
 
         private void OnMenuChangeColor(object s, Color back, Color fore) {
+            NYForm.BackColor = NYForm.TransparencyKey = back;
+
             Recolor(back, fore);
             ToggleMenuRadiobutton(s);
         }
 
-        void MakeTray() {
-            TrayIcon.ContextMenu = new ContextMenu(new MenuItem[] {
+        private void OnMenuChangeAudioQuality(object s, byte quality) {
+            if (Properties.Settings.Default.audioQuality == quality)
+                return;
+
+            Properties.Settings.Default.audioQuality = quality;
+            Properties.Settings.Default.Save();
+
+            ToggleMenuRadiobutton(s);
+
+            if (audio != null)
+                startAudioPlayer();
+        }
+
+        void MakeContextMenu() {
+            ContextMenu = LeftSymbolsLabel.ContextMenu = IdLabel.ContextMenu = StatusLabel.ContextMenu = CaptchaPicture.ContextMenu = TrayIcon.ContextMenu = new ContextMenu(new MenuItem[] {
                 new MenuItem("Радио Анонимус =>", (s, e) => Process.Start(URLs.radio)),
                 new MenuItem("Видимо", (s, e) => ShowStreamsForm()),
                 new MenuItem("-"),
@@ -85,11 +111,11 @@ namespace anonPoster {
                     Properties.Settings.Default.topMost = ((MenuItem)s).Checked = TopMost = !TopMost;
                     Properties.Settings.Default.Save();
                 }) { Checked = Properties.Settings.Default.topMost },
-                new MenuItem("Xzibit", new MenuItem[] {
-                    new MenuItem("Побелеть", (s, e) => OnMenuChangeColor(s, Color.White, Color.Black)) { RadioCheck = true },
-                    new MenuItem("Почернеть", (s, e) => OnMenuChangeColor(s, Color.Black, Color.White)) { RadioCheck = true },
-                    new MenuItem("Шиндовс", (s, e) => OnMenuChangeColor(s, DefaultBackColor, DefaultForeColor)) { RadioCheck = true },
-                    new MenuItem("Каштом", (s, e) => {
+                new MenuItem("Боевой окрас", new MenuItem[] {
+                    new MenuItem("Белый", (s, e) => OnMenuChangeColor(s, Color.White, Color.Black)) { RadioCheck = true },
+                    new MenuItem("Чёрный", (s, e) => OnMenuChangeColor(s, Color.Black, Color.White)) { RadioCheck = true },
+                    new MenuItem("Стандартный", (s, e) => OnMenuChangeColor(s, DefaultBackColor, DefaultForeColor)) { RadioCheck = true },
+                    new MenuItem("Нестандартный", (s, e) => {
                         ColorDialog colorPick = new ColorDialog{ FullOpen = true };
 
                         Color b = colorPick.Color = BackColor;
@@ -109,21 +135,33 @@ namespace anonPoster {
                     GlobHotkey();
                 }),
                 */
+                new MenuItem("Проверка текста", new MenuItem[] {
 #if USE_CHMO
-                new MenuItem("Чморить", (s, e) => {
-                    ((MenuItem)s).Checked = Properties.Settings.Default.doChmo = !Properties.Settings.Default.doChmo;
-                    Properties.Settings.Default.Save();
-                }) { Checked = Properties.Settings.Default.doChmo },
+                    new MenuItem("Чмо", (s, e) => {
+                        ((MenuItem)s).Checked = Properties.Settings.Default.useChmo = !Properties.Settings.Default.useChmo;
+                    }) { Checked = Properties.Settings.Default.useChmo },
 #endif
+                    new MenuItem("Hunspell", (s, e) => {
+                        if (((MenuItem)s).Checked = Properties.Settings.Default.useHunspell = !Properties.Settings.Default.useHunspell)
+                            LoadHunspell();
+                    }) { Checked = Properties.Settings.Default.useHunspell },
+                }),
+
+                new MenuItem("Запускаться в фоне", (s, e) => {
+                    ((MenuItem)s).Checked = Properties.Settings.Default.startInBackground = !Properties.Settings.Default.startInBackground;
+                    Properties.Settings.Default.Save();
+                }) { Checked = Properties.Settings.Default.startInBackground },
+                new MenuItem("Автозагрузка с системой", (s, e) => {
+                    MenuItem mi = (MenuItem)s;
+                    mi.Checked = Autostart.Set(!mi.Checked);
+                }) { Checked = Autostart.Check() },
                 new MenuItem("Следить за видимом", (s, e) => {
-                    if (Properties.Settings.Default.watchVidimo = ((MenuItem)s).Checked = streamTestTimer.Enabled = !streamTestTimer.Enabled)
-                        TestStream();
+                    Properties.Settings.Default.watchVidimo = ((MenuItem)s).Checked = vw.ToggleStreamTestTimer();
                     Properties.Settings.Default.Save();
                 }) { Checked = Properties.Settings.Default.watchVidimo },
                 new MenuItem("Следить за радивой", new MenuItem[] {
                     new MenuItem("Следить за радивой", (s, e) => {
-                        if (Properties.Settings.Default.watchRadio = ((MenuItem)s).Checked = radioTestTimer.Enabled = !radioTestTimer.Enabled)
-                            TestRadio();
+                        Properties.Settings.Default.watchRadio = ((MenuItem)s).Checked = rw.ToggleRadioTestTimer();
                         Properties.Settings.Default.Save();
                     }) { Checked = Properties.Settings.Default.watchRadio },
                     new MenuItem("Предупреждать о смене трека", (s, e) => {
@@ -143,6 +181,24 @@ namespace anonPoster {
                 new MenuItem("-"),
                 new MenuItem("Что умеет?", (s, e) => HelpMeee()),
                 new MenuItem("Выход", (s, e) => Close())
+            });
+
+
+            // Контекстное меню на кнопке воспроизведения радивы
+            PlayPadioButton.ContextMenu = new ContextMenu(new MenuItem[] {
+                new MenuItem("ХТТПС", (s, e) => {
+                    ((MenuItem)s).Checked = Properties.Settings.Default.audioUseSSL = !Properties.Settings.Default.audioUseSSL;
+                    Properties.Settings.Default.Save();
+
+                    if (audio != null)
+                        startAudioPlayer();
+                }) { Checked = Properties.Settings.Default.audioUseSSL },
+                new MenuItem("192 кбпс", (s, e) => OnMenuChangeAudioQuality(s, 192)) { RadioCheck = true,
+                    Checked = Properties.Settings.Default.audioQuality == 192},
+                new MenuItem("64 кбпс", (s, e) => OnMenuChangeAudioQuality(s, 64)) { RadioCheck = true,
+                    Checked = Properties.Settings.Default.audioQuality == 64},
+                new MenuItem("12 кбпс", (s, e) => OnMenuChangeAudioQuality(s, 12)) { RadioCheck = true,
+                    Checked = Properties.Settings.Default.audioQuality == 12},
             });
         }
 
@@ -199,7 +255,7 @@ namespace anonPoster {
 #endif
             try {
                 if (PageText == null) {
-                    byte[] pageBytes = new WebClient().DownloadData(URLs.radioFeedback);
+                    byte[] pageBytes = captchaWC.DownloadData(URLs.radioFeedback);
                     PageText = Encoding.UTF8.GetString(pageBytes);
                 }
 
@@ -211,7 +267,7 @@ namespace anonPoster {
                         ChangeCaptchaImage(Properties.Resources.captchaNoInternet);
                         break;
                     case WebExceptionStatus.ProtocolError:
-                        MessageBox.Show("Охуеть. Капча пропала", "Ёбаный пиздец", MessageBoxButtons.OK, MessageBoxIcon.Question);
+                        MessageBox.Show(this, "Охуеть. Капча пропала", "Ёбаный пиздец", MessageBoxButtons.OK, MessageBoxIcon.Question);
                         break;
                     default:
                         HandleException(e);
@@ -238,7 +294,7 @@ namespace anonPoster {
             ColorizeCaptcha();
         }
 
-        void HandleException(Exception e) {
+        public void HandleException(Exception e) {
             if (e is WebException we && we.Status == WebExceptionStatus.ConnectFailure)
                 ChangeCaptchaImage(Properties.Resources.captchaNoInternet);
             else
@@ -282,7 +338,6 @@ namespace anonPoster {
         protected override bool ProcessDialogKey(Keys keyData) {
             switch (keyData) {
                 case Keys.Escape:
-                    //WindowState = FormWindowState.Minimized;
                     Visible = false;
                     return true;
                 case Keys.F1:
@@ -291,6 +346,10 @@ namespace anonPoster {
                 case Keys.Control | Keys.Enter:
                     Kukarek();
                     return true;
+                case Keys.Apps: // https://en.wikipedia.org/wiki/Menu_key
+                case Keys.F10:
+                    ContextMenu.Show(this, new Point());
+                    return true;
             }
             return base.ProcessDialogKey(keyData);
         }
@@ -298,24 +357,19 @@ namespace anonPoster {
 
 
         bool Kukarek() {
-            int left = 500 - KukarekBox.Text.Length;
-            if (left == 500) {
+            if (KukarekBox.TextLength == 0) {
                 TrayIcon.ShowBalloonTip(1000, null, "Введи что-нибудь", ToolTipIcon.Warning);
                 KukarekBox.Focus();
                 return false;
             }
-            if (left < 0) {
-                TrayIcon.ShowBalloonTip(1000, null, "Превышен лимит в 500 символов", ToolTipIcon.Warning);
-                KukarekBox.Focus();
-                return false;
-            }
+
 
 #if USE_CHMO
-            if (Properties.Settings.Default.doChmo) {
+            if (Properties.Settings.Default.useChmo) {
                 string[] chmoResult = mainChmo.CheckString(KukarekBox.Text);
                 if (chmoResult.Length > 0) {
                     string question = $"Мы обнаружили у вас странные слова:\n\n{string.Join(", ", chmoResult)}\n\nЖелаете вернуться к редактированию сообщения и исправить их?";
-                    if (DialogResult.Yes == MessageBox.Show(question, null, MessageBoxButtons.YesNo, MessageBoxIcon.Question)) {
+                    if (DialogResult.Yes == MessageBox.Show(this, question, null, MessageBoxButtons.YesNo, MessageBoxIcon.Question)) {
                         KukarekBox.Focus();
                         return false;
                     }
@@ -347,7 +401,7 @@ namespace anonPoster {
             } else {
                 postDataSb
                     .Append("cid=").Append(CaptchaID)
-                    .Append("&left=").Append(left)
+                    .Append("&left=").Append(500 - KukarekBox.TextLength)
                     .Append("&msg=").Append(Uri.EscapeDataString(KukarekBox.Text))
                     .Append("&check=").Append(CaptchaAnswer.Text);
             }
@@ -358,12 +412,12 @@ namespace anonPoster {
 
             Enabled = false;
             try {
-                WebClient wc = new WebClient();
+                postWC.Headers.Clear();
                 if (Properties.Settings.Default.useGodGrace)
-                    wc.Headers.Add(HttpRequestHeader.UserAgent, "AnonFM Player for Android");
-                wc.Headers.Add(HttpRequestHeader.Referer, URLs.radioFeedback);
+                    postWC.Headers.Add(HttpRequestHeader.UserAgent, "AnonFM Player for Android");
+                postWC.Headers.Add(HttpRequestHeader.Referer, URLs.radioFeedback);
                 string response = Encoding.UTF8.GetString(
-                    wc.UploadData(URLs.radioFeedback, "POST", Encoding.ASCII.GetBytes(postDataSb.ToString()))
+                    postWC.UploadData(URLs.radioFeedback, "POST", Encoding.ASCII.GetBytes(postDataSb.ToString()))
                     );
 
                 if (response.IndexOf("Отправлено") > -1) {
@@ -377,7 +431,7 @@ namespace anonPoster {
                     if (!Properties.Settings.Default.useGodGrace)
                         ReloadCaptcha();
 
-                    KukarekBox.Text = null;
+                    KukarekBox.Clear();
                     KukarekBox.Focus();
                 } else {
                     StatusLabel.Text = "ERR";
@@ -393,10 +447,34 @@ namespace anonPoster {
         }
 
 
+        // Hunspell
+        bool LoadHunspell() {
+            if (!hunspellLoaded) {
+
+                string dllPath = $"{Path.GetDirectoryName(Assembly.GetEntryAssembly().Location)}{Path.DirectorySeparatorChar}NHunspell.dll";
+                if (!SpellHunspell.LoadDll(dllPath))
+                    return false;
+
+                if (!SpellHunspell.Load(Assembly.GetEntryAssembly().Location))
+                    return false;
+
+                hunspellLoaded = true;
+                HunspellCheckText();
+            }
+
+            return true;
+        }
+
+        void HunspellCheckText() {
+            if (Properties.Settings.Default.useHunspell && hunspellLoaded)
+                SpellHunspell.ValidateTextInRich(KukarekBox);
+        }
+
+
+
 
         void HelpMeee() {
-            //WindowState = FormWindowState.Normal;
-            MessageBox.Show(@"Умеет радиачевать капчу и срать в кукарекалку
+            MessageBox.Show(this, @"Умеет радиачевать капчу и срать в кукарекалку
 
 - Если подробно, то есть хоткеи:
 Показывание главного окна по Ctrl+Shift+K
@@ -412,174 +490,42 @@ namespace anonPoster {
 
 ♠ Через контекстное меню на обложке можно загуглить 10 последних треков
 
+♣ Через контекстное меню на странной кнопке можно выбрать качество внучания
+
+• Есть ключ /bg для запуска в фоне
+
 └ Софтина может предупреждать о запуске видимопотока", "Что умеет?", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             const string dev = "c0d3d by AHOHNMYC, 2o18\n\nПроверить обновления?";
-            if (DialogResult.Yes == MessageBox.Show(dev, "d3ve1oler", MessageBoxButtons.YesNo, MessageBoxIcon.Information)) {
+            if (DialogResult.Yes == MessageBox.Show(this, dev, "d3ve1oler", MessageBoxButtons.YesNo, MessageBoxIcon.Information)) {
                 Process.Start(URLs.selfUpdate);
             }
         }
 
 
+        private void SetAnchor(AnchorStyles ans, Control[] controls) {
+            foreach (Control control in controls)
+                control.Anchor = ans;
+        }
 
         void SetDocking() {
             ResizePicture.Top = Height - ResizePicture.Height;
             ResizePicture.Left = Width - ResizePicture.Width;
-            ResizePicture.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-            KukarekBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right;
-            LeftSymbolsLabel.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
-            StatusLabel.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
-            IdLabel.Anchor = AnchorStyles.Right| AnchorStyles.Bottom;
-            CaptchaPicture.Anchor = AnchorStyles.Bottom;
-            CaptchaAnswer.Anchor = AnchorStyles.Bottom;
-            CoverBox.Anchor = AnchorStyles.Bottom;
+
+            AnchorStyles b = AnchorStyles.Bottom;
+            AnchorStyles br = AnchorStyles.Bottom | AnchorStyles.Right;
+            AnchorStyles bl = AnchorStyles.Bottom | AnchorStyles.Left;
+            AnchorStyles around = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Bottom | AnchorStyles.Left;
+
+            SetAnchor(b, new Control[] { CaptchaPicture, CaptchaAnswer, CoverBox });
+            SetAnchor(br, new Control[] { IdLabel, ResizePicture });
+            SetAnchor(bl, new Control[] { StatusLabel, PlayPadioButton, LeftSymbolsLabel });
+            SetAnchor(around, new Control[] { KukarekBox });
         }
 
-        void TestStream() {
-            streamTestTimer.Stop();
-            bool isStreamNow = false;
 
-            try {
-                HttpWebRequest request = WebRequest.Create(URLs.mainStream) as HttpWebRequest;
-                request.Method = "HEAD";
-                request.GetResponse();
-                isStreamNow = true;
-            } catch (WebException e) when (e.Status is WebExceptionStatus.ProtocolError && e.Response is HttpWebResponse r) {
-                // If we have 404, it means stream hasn't been started
-                // All is OK. Just skip it
-                if (r.StatusCode != HttpStatusCode.NotFound)
-                    HandleException(e);
-            } catch (Exception e) {
-                HandleException(e);
-            }
 
-            if (isStreamNow && !isStream) {
-                string question = @"    Н͔͊а͇̽ч̮̽а͇͘л̱̊а̱̏с͍͠ь͉̔ ̹̊т̢̓р͇͌а̤͆н̥̂с̞͑л͓̂я̨̿ц̗̀и̥̍я̻̆.̢͐
-                      ҉̕͞
-̵̢̨Т̣̾ы͓̿ ̡̏х̮̕о̺͆ч͍̔е̘͌ш̗͑ь̖̒ ̮͠О͉̒ ͖͠Т̭͛ ̕ͅК͈̍ ̣̏Р̥͠ ̳͛Ы̨̉ ̞̉Т̖̓ ͇͌Ь̡̀ ̩̈́е̝̒ё̟̾ ?̪̕";
 
-                Visible = false;
-                if (DialogResult.Yes == MessageBox.Show(question, "Внимание!", MessageBoxButtons.YesNo, MessageBoxIcon.Stop))
-                    ShowStreamsForm();
-                Visible = true;
-            }
-            if (!isStreamNow && isStream) {
-                TrayIcon.ShowBalloonTip(1000, null, "Стрим закончился", ToolTipIcon.Warning);
-            }
-            isStream = isStreamNow;
-            streamTestTimer.Start();
-        }
-
-        void StartStreamTestTimer() {
-            streamTestTimer = new Timer();
-            streamTestTimer.Tick += (sender, e) => TestStream();
-            streamTestTimer.Interval = STREAM_TIMER_RESOLUTION;
-            streamTestTimer.Enabled = Properties.Settings.Default.watchVidimo;
-            // Check once immediately after run
-            if (Properties.Settings.Default.watchVidimo)
-                TestStream();
-        }
-
-        void TestRadio() {
-            radioTestTimer.Stop();
-
-            try {
-                byte[] pageBytes = new WebClient().DownloadData(URLs.radioState);
-                string pageText = Encoding.UTF8.GetString(pageBytes);
-
-                string[] delimited = pageText.Split('\n');
-                Dictionary<string, string> d = new Dictionary<string, string>();
-                for (int i=0; delimited.Length-i >= 2; i+=2)
-                    d.Add(delimited[i], delimited[i + 1]);
-
-                if (d.ContainsKey("cover")) {
-                    int newCover = int.Parse(d["cover"]);
-                    if (newCover != lastCover) {
-                        lastCover = newCover;
-                        CoverBox.LoadAsync(URLs.RadioCover(newCover));
-                    }
-                }
-
-                StringBuilder trackSb = new StringBuilder();
-                if (d.ContainsKey("Artist"))
-                    trackSb.Append(d["Artist"]);
-                if (d.ContainsKey("Title"))
-                    trackSb.Append($" — {d["Title"]}");
-                /*
-                if (d.ContainsKey("Album"))
-                    trackSb.Append($" из альбома {d["Album"]}");
-                    */
-                string track = trackSb.ToString();
-
-#if DEBUG
-                Debugger.Log(5, "Получили имя трека", track + "\n");
-#endif
-
-                coverTt.SetToolTip(CoverBox, track);
-
-                if (Properties.Settings.Default.warnAboutLive && d.ContainsKey("isLive")) {
-                    bool isLive = int.Parse(d["isLive"]) == 1;
-                    if (isLive && !wasLive)
-                        MessageBox.Show("Началось живое вещщание\nПодключайся");
-                    wasLive = isLive;
-                }
-
-                if (track.Length > 0)
-                    UpdateCoverMenu(track);
-
-            } catch (WebException e) when (e.Status is WebExceptionStatus.ProtocolError && e.Response is HttpWebResponse r) {
-                // If we have 404, it means stream hasn't been started
-                // All is OK. Just skip it
-                if (r.StatusCode != HttpStatusCode.NotFound)
-                    HandleException(e);
-            } catch (Exception e) {
-                HandleException(e);
-            }
-
-            radioTestTimer.Start();
-        }
-
-        private void OpenGoogleTrackSearch(object s, EventArgs e) => Process.Start(URLs.Googel((s as MenuItem).Text.Substring(4)));
-
-        void UpdateCoverMenu(string track) {
-            bool menuExists = CoverBox.ContextMenu != null;
-
-            if (menuExists && CoverBox.ContextMenu.MenuItems[0].Text.Substring(4) == track)
-                return;
-
-            if (Properties.Settings.Default.warnAboutTrackChange)
-                TrayIcon.ShowBalloonTip(0, null, track, ToolTipIcon.Info);
-
-            int newMenuLength = 3;
-            // 12 — 10 треков + разделитель + /song/
-            if (menuExists) newMenuLength = (CoverBox.ContextMenu.MenuItems.Count < 12)
-                    ? CoverBox.ContextMenu.MenuItems.Count + 1
-                    : 12;
-
-            MenuItem[] mi = new MenuItem[newMenuLength];
-            mi[0] = new MenuItem($" 0. {track}", OpenGoogleTrackSearch);
-            for (int i = 1; i < newMenuLength-2; i++) {
-                mi[i] = CoverBox.ContextMenu.MenuItems[i - 1];
-                mi[i].Text = $"-{i}. {mi[i].Text.Substring(4)}";
-            }
-
-            mi[newMenuLength - 2] = new MenuItem("-");
-            mi[newMenuLength - 1] = new MenuItem("Попробовать /song/ =>", (s, e) => Process.Start(URLs.radioSong));
-
-            CoverBox.ContextMenu = new ContextMenu(mi);
-        }
-
-        void StartRadioTestTimer() {
-            radioTestTimer = new Timer();
-            radioTestTimer.Tick += (sender, e) => TestRadio();
-            radioTestTimer.Interval = RADIO_TIMER_RESOLUTION;
-            radioTestTimer.Enabled = Properties.Settings.Default.watchRadio;
-            // Check once immediately after run
-            if (Properties.Settings.Default.watchRadio)
-                TestRadio();
-        }
-
-        
 
         // Captcha answer
         private void CaptchaAnswer_KeyDown(object sender, KeyEventArgs e) {
@@ -611,6 +557,10 @@ namespace anonPoster {
         void MainForm_Load(object sender, EventArgs e) {
             AppDomain.CurrentDomain.ProcessExit += (azaza, ololo) => TrayIcon.Dispose();
             AppDomain.CurrentDomain.ProcessExit += (azaza, ololo) => Properties.Settings.Default.Save();
+            AppDomain.CurrentDomain.ProcessExit += (azaza, ololo) => destructAudioPlayer();
+
+            if (Properties.Settings.Default.useHunspell)
+                LoadHunspell();
 
             // Visuals
             ClientSize = new Size(
@@ -622,18 +572,23 @@ namespace anonPoster {
                 22 + CaptchaPicture.Height + CaptchaAnswer.Height
                 );
 
-            TrayIcon.Icon = Icon = Icon.ExtractAssociatedIcon(System.Reflection.Assembly.GetEntryAssembly().Location);
+            TrayIcon.Icon = Icon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly().Location);
 
-            TopMost = Properties.Settings.Default.topMost;
+            NYForm.TopMost = TopMost = Properties.Settings.Default.topMost;
 
             SetDocking();
             GlobHotkey();
-            MakeTray();
+            MakeContextMenu();
             Recolor(Properties.Settings.Default.backColor, Properties.Settings.Default.foreColor);
 
-            ContextMenu = LeftSymbolsLabel.ContextMenu = IdLabel.ContextMenu = StatusLabel.ContextMenu = CaptchaPicture.ContextMenu = TrayIcon.ContextMenu;
-
             coverTt.SetToolTip(CoverBox, "");
+
+            string[] verbs = new string[] { "Зву", "Кри", "Мол", "Вну", "Ы", "Сер", "Ди", "Отве", "Важни", "Вклю", "", "", "" };
+            int r = mainRandom.Next(verbs.Length);
+            PlayPadioButton.Text = $"{verbs[r]}чать";
+
+            // Чтобы после вставки CJK не сбрасывался ClearType
+            KukarekBox.LanguageOption = RichTextBoxLanguageOptions.DualFont;
 
             // Window
             BringToFront();
@@ -646,10 +601,16 @@ namespace anonPoster {
             else
                 ReloadCaptcha();
 
-            StartStreamTestTimer();
-            StartRadioTestTimer();
+            // Watchers
+            ltm = new LastTracksMenu(this);
+            rw = new RadioWatcher(this);
+            vw = new VideoWatcher(this);
 
 #if DEBUG
+            //KukarekBox.Text = @"Два бомжа, Валера и Петюх, сидели в углу руинированной квартиры на куче влажного тряпья. В выбитом окне сиял тонкий месяц. Бомжи были пьяны. И допивали бутылку «Русской». Они начали пить с раннего утра на Ярославском вокзале: четвертинка «Истока», полбатона белого хлеба, куриные объедки из гриль-бара. Потом доехали до Сокольников, где в парке насобирали пустых бутылок, сдали и продолжили: три бутылки пива «Очаковское», две булочки с маком. После они выспались на лавочке, доехали до Новодевичьего монастыря, где до вечера просили милостыню. Ее хватило на бутылку «Русской».";
+            KukarekBox.Text = "Мама мыла азаза";
+            //KukarekBox.Text = "Азаза мыл раму";
+
             IdLabel.Text = "DEBUGDEBUGDEBUG";
             StatusLabel.Text = "DEB";
             Debugger.Log(5, "ALARM", "ВЫРУБИ ОТЛАДКУ ПРИ РЕЛИЗЕ\n");
@@ -660,6 +621,36 @@ namespace anonPoster {
             KukarekBox.Focus();
         }
 
+        private void SyncNYFormPosition() {
+            Point dl = DesktopLocation;
+            dl.X -= 55 - CoverBox.Left;
+            dl.Y -= 35 - CoverBox.Top;
+            NYForm.DesktopLocation = dl;
+        }
+
+        private void MainForm_Move(object sender, EventArgs e) {
+            SyncNYFormPosition();
+        }
+
+        private void MainForm_Resize(object sender, EventArgs e) {
+            SyncNYFormPosition();
+        }
+
+        private void MainForm_Shown(object sender, EventArgs e) {
+            NYForm.DesktopLocation = DesktopLocation;
+            NYForm.Owner = this;
+            SyncNYFormPosition();
+            NYForm.Show();
+            NYForm.BringToFront();
+            NYForm.Visible = Visible;
+            if (Visible)
+                Focus();
+        }
+
+        private void MainForm_VisibleChanged(object sender, EventArgs e) {
+            NYForm.Visible = Visible;
+        }
+
 
         // Captcha image
         private void CaptchaPicture_MouseClick(object sender, MouseEventArgs e) {
@@ -667,16 +658,13 @@ namespace anonPoster {
                 ReloadCaptcha();
         }
 
-        
+
         // Kukarek text
-        void KukarekBox_KeyPress(object sender, KeyPressEventArgs e) {
-            int left = 500 - KukarekBox.Text.Length;
-            if (left <= 0)
-                e.Handled = true;
-        }
         void KukarekBox_TextChanged(object sender, EventArgs e) {
-            int left = 500 - KukarekBox.Text.Length;
+            int left = 500 - KukarekBox.TextLength;
             LeftSymbolsLabel.Text = left.ToString();
+
+            HunspellCheckText();
         }
 
 
@@ -684,7 +672,40 @@ namespace anonPoster {
         private void TrayIcon_MouseClick(object sender, MouseEventArgs e) {
             if (e.Button == MouseButtons.Left)
                 NativeMethods.SendMessage(Handle, GlobalHotkey.Constants.WM_HOTKEY_MSG_ID, 0, 0);
+        }
 
+        // Play radio
+        CPlayer audio;
+        private void destructAudioPlayer() {
+            if (audio != null) {
+                audio.Shutdown();
+                audio = null;
+            }
+        }
+        private void startAudioPlayer() {
+            destructAudioPlayer();
+
+            bool ssl = Properties.Settings.Default.audioUseSSL;
+
+            string stream;
+            switch (Properties.Settings.Default.audioQuality) {
+                case 192: stream = URLs.audio192; break;
+                case 64:  stream = URLs.audio64;  break;
+                case 12:  stream = URLs.audio12;  break;
+                default:  stream = URLs.audio64;  break;
+            }
+
+            audio = new CPlayer(PlayPadioButton.Handle, Handle);
+            audio.OpenURL($"{(ssl ? URLs.audioSSL : URLs.audio)}{stream}");
+        }
+        private void PlayRadioButton_MouseClick(object sender, MouseEventArgs e) {
+            if (e.Button != MouseButtons.Left)
+                return;
+
+            if (PlayPadioButton.Checked)
+                startAudioPlayer();
+            else
+                destructAudioPlayer();
         }
 
     }

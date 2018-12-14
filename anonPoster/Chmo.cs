@@ -110,7 +110,7 @@ namespace anonPoster {
                     position++;
 
                 int wordLength = position - wordStart;
-                // Если у нас меньше трёх валидных символов, нас прислали хуйню, отправляем обратно
+                // Если у нас меньше четырёх валидных символов, нам прислали хуйню, отправляем обратно
                 if (validSymbols < 4  && validSymbols < wordLength)
                     strangeWords.Add(input.Substring(wordStart, wordLength));
 
@@ -121,7 +121,7 @@ namespace anonPoster {
 #endregion
 
 
-#region По Ычу, оптимизированный
+        #region По Ычу, оптимизированный
         /*
         public bool CheckString(string input, ref string[] output) {
 
@@ -166,10 +166,10 @@ namespace anonPoster {
             return 0 == output.Length;
         }
         */
-#endregion
+        #endregion
 
 
-#region По Ычу
+        #region По Ычу
         /*
         public bool CheckString(string input, ref string[] output) {
 
@@ -218,7 +218,7 @@ namespace anonPoster {
             return 0 == strangeWords.Count;
         }
         */
-#endregion
+        #endregion
 
 
     }

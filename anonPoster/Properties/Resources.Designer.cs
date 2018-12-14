@@ -36,9 +36,6 @@
             }
         }
         
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap arrow {
             get {
                 object obj = ResourceManager.GetObject("arrow", resourceCulture);
@@ -46,9 +43,6 @@
             }
         }
         
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap captchaNoInternet {
             get {
                 object obj = ResourceManager.GetObject("captchaNoInternet", resourceCulture);
@@ -56,12 +50,16 @@
             }
         }
         
-        /// <summary>
-        ///   Поиск локализованного ресурса типа System.Drawing.Bitmap.
-        /// </summary>
         internal static System.Drawing.Bitmap graceOfGod {
             get {
                 object obj = ResourceManager.GetObject("graceOfGod", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        internal static System.Drawing.Bitmap newYearHat {
+            get {
+                object obj = ResourceManager.GetObject("newYearHat", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

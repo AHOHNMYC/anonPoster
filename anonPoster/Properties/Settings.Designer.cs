@@ -133,13 +133,61 @@ namespace anonPoster.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool doChmo {
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool useHunspell {
             get {
-                return ((bool)(this["doChmo"]));
+                return ((bool)(this["useHunspell"]));
             }
             set {
-                this["doChmo"] = value;
+                this["useHunspell"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool audioUseSSL {
+            get {
+                return ((bool)(this["audioUseSSL"]));
+            }
+            set {
+                this["audioUseSSL"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("64")]
+        public byte audioQuality {
+            get {
+                return ((byte)(this["audioQuality"]));
+            }
+            set {
+                this["audioQuality"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool startInBackground {
+            get {
+                return ((bool)(this["startInBackground"]));
+            }
+            set {
+                this["startInBackground"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool useChmo {
+            get {
+                return ((bool)(this["useChmo"]));
+            }
+            set {
+                this["useChmo"] = value;
             }
         }
     }

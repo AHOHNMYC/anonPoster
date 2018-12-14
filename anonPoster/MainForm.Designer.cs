@@ -33,6 +33,7 @@
             this.CaptchaPicture = new System.Windows.Forms.PictureBox();
             this.ResizePicture = new System.Windows.Forms.PictureBox();
             this.CoverBox = new System.Windows.Forms.PictureBox();
+            this.PlayPadioButton = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.CaptchaPicture)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.ResizePicture)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.CoverBox)).BeginInit();
@@ -47,8 +48,8 @@
             this.KukarekBox.Size = new System.Drawing.Size(511, 110);
             this.KukarekBox.TabIndex = 0;
             this.KukarekBox.Text = "";
+            this.KukarekBox.MaxLength = 500;
             this.KukarekBox.TextChanged += new System.EventHandler(this.KukarekBox_TextChanged);
-            this.KukarekBox.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.KukarekBox_KeyPress);
             // 
             // CaptchaAnswer
             // 
@@ -95,6 +96,19 @@
             this.StatusLabel.TabIndex = 7;
             this.StatusLabel.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DragByMouse);
             // 
+            // PlayPadioButton
+            // 
+            this.PlayPadioButton.Appearance = System.Windows.Forms.Appearance.Button;
+            this.PlayPadioButton.AutoSize = true;
+            this.PlayPadioButton.Cursor = System.Windows.Forms.Cursors.Hand;
+            this.PlayPadioButton.Location = new System.Drawing.Point(12, 143);
+            this.PlayPadioButton.Name = "PlayPadioButton";
+            this.PlayPadioButton.Size = new System.Drawing.Size(74, 27);
+            this.PlayPadioButton.TabIndex = 9;
+            this.PlayPadioButton.Text = "Звучать";
+            this.PlayPadioButton.UseVisualStyleBackColor = true;
+            this.PlayPadioButton.MouseClick += new System.Windows.Forms.MouseEventHandler(this.PlayRadioButton_MouseClick);
+            // 
             // CaptchaPicture
             // 
             this.CaptchaPicture.Cursor = System.Windows.Forms.Cursors.Hand;
@@ -129,12 +143,14 @@
             this.CoverBox.TabIndex = 8;
             this.CoverBox.TabStop = false;
             this.CoverBox.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DragByMouse);
+            this.CoverBox.Cursor = System.Windows.Forms.Cursors.Help;
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(530, 207);
+            this.Controls.Add(this.PlayPadioButton);
             this.Controls.Add(this.StatusLabel);
             this.Controls.Add(this.LeftSymbolsLabel);
             this.Controls.Add(this.CaptchaPicture);
@@ -158,6 +174,10 @@
             this.Activated += new System.EventHandler(this.MainForm_Activated);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DragByMouse);
+            this.Shown += new System.EventHandler(this.MainForm_Shown);
+            this.VisibleChanged += new System.EventHandler(this.MainForm_VisibleChanged);
+            this.Move += new System.EventHandler(this.MainForm_Move);
+            this.Resize += new System.EventHandler(this.MainForm_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.CaptchaPicture)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.ResizePicture)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.CoverBox)).EndInit();
@@ -176,7 +196,8 @@
         private System.Windows.Forms.PictureBox ResizePicture;
         private System.Windows.Forms.Label StatusLabel;
         public System.Windows.Forms.NotifyIcon TrayIcon;
-        private System.Windows.Forms.PictureBox CoverBox;
+        public System.Windows.Forms.PictureBox CoverBox;
+        private System.Windows.Forms.CheckBox PlayPadioButton;
     }
 }
 

@@ -10,6 +10,13 @@
         public const string radioState      = radio + "/state.txt";
         public const string radioFeedback   = radio + "/feedback";
 
+        public const string audio           = "http://anon.fm:8000";
+        public const string audioSSL        = radio + "/streams";
+        public const string audio192        = "/radio";
+        public const string audio64         = "/radio-low";
+        public const string audio12         = "/radio.aac";
+
+
         public static string RadioCaptcha(int CaptchaID) {
             return $"{radioFeedback}/{CaptchaID}.gif";
         }
