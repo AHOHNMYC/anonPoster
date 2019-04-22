@@ -10,7 +10,7 @@
 //[assembly: AssemblyConfiguration("")]
 //[assembly: AssemblyCompany("Microsoft")]
 //[assembly: AssemblyProduct("anonPoster")]
-[assembly: AssemblyCopyright("© AHOHNMYC, 2018")]
+[assembly: AssemblyCopyright("© AHOHNMYC, 2018-9")]
 //[assembly: AssemblyTrademark("")]
 //[assembly: AssemblyCulture("")]
 
@@ -32,7 +32,7 @@
 // Можно задать все значения или принять номер сборки и номер редакции по умолчанию.
 // используя "*", как показано ниже:
 // [assembly: AssemblyVersion("1.0.*")]
-[assembly: AssemblyVersion("0.0.0.1")]
+[assembly: AssemblyVersion("0.0.0.3")]
 #pragma warning disable CS7035 // Указанная строка версии не соответствует рекомендованному формату — основной номер.дополнительный номер.сборка.редакция
 [assembly: AssemblyFileVersion("0.0.0α")]
 #pragma warning restore CS7035 // Указанная строка версии не соответствует рекомендованному формату — основной номер.дополнительный номер.сборка.редакция

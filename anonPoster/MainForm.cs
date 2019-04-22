@@ -25,11 +25,10 @@ namespace anonPoster {
         WebClient postWC = new WebClient();
         bool hunspellLoaded = false;
 
-        Form NYForm = new NY();
-
         public LastTracksMenu ltm;
         public RadioWatcher rw;
         public VideoWatcher vw;
+        public ScheduleWatcher sw;
         public Streams streamsForm;
         public ToolTip coverTt = new ToolTip { IsBalloon = true };
 
@@ -61,6 +60,8 @@ namespace anonPoster {
 
 
             InitializeComponent();
+
+            PlayPadioButton.Visible = File.Exists("MediaFoundation.dll");
         }
 
         void GlobHotkey() {
@@ -83,8 +84,6 @@ namespace anonPoster {
         }
 
         private void OnMenuChangeColor(object s, Color back, Color fore) {
-            NYForm.BackColor = NYForm.TransparencyKey = back;
-
             Recolor(back, fore);
             ToggleMenuRadiobutton(s);
         }
@@ -135,15 +134,21 @@ namespace anonPoster {
                     GlobHotkey();
                 }),
                 */
+                new MenuItem("Скрывать ошибки", (s, e) => {
+                    ((MenuItem)s).Checked = Properties.Settings.Default.hideErrors = !Properties.Settings.Default.hideErrors;
+                    Properties.Settings.Default.Save();
+                }) { Checked = Properties.Settings.Default.hideErrors },
                 new MenuItem("Проверка текста", new MenuItem[] {
 #if USE_CHMO
                     new MenuItem("Чмо", (s, e) => {
                         ((MenuItem)s).Checked = Properties.Settings.Default.useChmo = !Properties.Settings.Default.useChmo;
+                        Properties.Settings.Default.Save();
                     }) { Checked = Properties.Settings.Default.useChmo },
 #endif
                     new MenuItem("Hunspell", (s, e) => {
                         if (((MenuItem)s).Checked = Properties.Settings.Default.useHunspell = !Properties.Settings.Default.useHunspell)
                             LoadHunspell();
+                        Properties.Settings.Default.Save();
                     }) { Checked = Properties.Settings.Default.useHunspell },
                 }),
 
@@ -173,6 +178,12 @@ namespace anonPoster {
                         Properties.Settings.Default.Save();
                     }) { Checked = Properties.Settings.Default.warnAboutLive },
                 }),
+#if DEBUG
+                new MenuItem("Следить за расписанием", (s, e) => {
+                    Properties.Settings.Default.watchSched = ((MenuItem)s).Checked = sw.ToggleSchedTestTimer();
+                    Properties.Settings.Default.Save();
+                }) { Checked = Properties.Settings.Default.watchSched },
+#endif
                 new MenuItem("Обход капчи (эксперим.)", (s, e) => {
                     ((MenuItem)s).Checked = Properties.Settings.Default.useGodGrace = !Properties.Settings.Default.useGodGrace;
                     Properties.Settings.Default.Save();
@@ -295,10 +306,14 @@ namespace anonPoster {
         }
 
         public void HandleException(Exception e) {
+#if DEBUG
+            Debugger.Break();
+#endif
             if (e is WebException we && we.Status == WebExceptionStatus.ConnectFailure)
                 ChangeCaptchaImage(Properties.Resources.captchaNoInternet);
             else
-                TrayIcon.ShowBalloonTip(1000, null, e.StackTrace + '\n' + e.Message, ToolTipIcon.Warning);
+                if (!Properties.Settings.Default.hideErrors)
+                    TrayIcon.ShowBalloonTip(1000, null, e.StackTrace + '\n' + e.Message, ToolTipIcon.Warning);
         }
 
 
@@ -327,8 +342,7 @@ namespace anonPoster {
                     BringToFront();
                     Activate();
                 } else {
-                    streamsForm.BringToFront();
-                    streamsForm.Activate();
+                    ShowStreamsForm();
                 }
             }
             base.WndProc(ref m);
@@ -574,8 +588,6 @@ namespace anonPoster {
 
             TrayIcon.Icon = Icon = Icon.ExtractAssociatedIcon(Assembly.GetEntryAssembly().Location);
 
-            NYForm.TopMost = TopMost = Properties.Settings.Default.topMost;
-
             SetDocking();
             GlobHotkey();
             MakeContextMenu();
@@ -605,6 +617,7 @@ namespace anonPoster {
             ltm = new LastTracksMenu(this);
             rw = new RadioWatcher(this);
             vw = new VideoWatcher(this);
+            sw = new ScheduleWatcher(this);
 
 #if DEBUG
             //KukarekBox.Text = @"Два бомжа, Валера и Петюх, сидели в углу руинированной квартиры на куче влажного тряпья. В выбитом окне сиял тонкий месяц. Бомжи были пьяны. И допивали бутылку «Русской». Они начали пить с раннего утра на Ярославском вокзале: четвертинка «Истока», полбатона белого хлеба, куриные объедки из гриль-бара. Потом доехали до Сокольников, где в парке насобирали пустых бутылок, сдали и продолжили: три бутылки пива «Очаковское», две булочки с маком. После они выспались на лавочке, доехали до Новодевичьего монастыря, где до вечера просили милостыню. Ее хватило на бутылку «Русской».";
@@ -619,36 +632,6 @@ namespace anonPoster {
         }
         void MainForm_Activated(object sender, EventArgs e) {
             KukarekBox.Focus();
-        }
-
-        private void SyncNYFormPosition() {
-            Point dl = DesktopLocation;
-            dl.X -= 55 - CoverBox.Left;
-            dl.Y -= 35 - CoverBox.Top;
-            NYForm.DesktopLocation = dl;
-        }
-
-        private void MainForm_Move(object sender, EventArgs e) {
-            SyncNYFormPosition();
-        }
-
-        private void MainForm_Resize(object sender, EventArgs e) {
-            SyncNYFormPosition();
-        }
-
-        private void MainForm_Shown(object sender, EventArgs e) {
-            NYForm.DesktopLocation = DesktopLocation;
-            NYForm.Owner = this;
-            SyncNYFormPosition();
-            NYForm.Show();
-            NYForm.BringToFront();
-            NYForm.Visible = Visible;
-            if (Visible)
-                Focus();
-        }
-
-        private void MainForm_VisibleChanged(object sender, EventArgs e) {
-            NYForm.Visible = Visible;
         }
 
 

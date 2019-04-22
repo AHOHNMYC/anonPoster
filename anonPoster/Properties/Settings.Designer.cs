@@ -190,5 +190,29 @@ namespace anonPoster.Properties {
                 this["useChmo"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool hideErrors {
+            get {
+                return ((bool)(this["hideErrors"]));
+            }
+            set {
+                this["hideErrors"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool watchSched {
+            get {
+                return ((bool)(this["watchSched"]));
+            }
+            set {
+                this["watchSched"] = value;
+            }
+        }
     }
 }

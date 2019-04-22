@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Windows.Forms;
 
 namespace anonPoster {
@@ -13,11 +14,17 @@ namespace anonPoster {
         bool isStream = false;
         Timer streamTestTimer;
 
+        WebClient videoWC = new WebClient();
 
         private MainForm mf;
 
         public VideoWatcher(MainForm _mf) {
             mf = _mf;
+
+            // Ignore all certificate checks for cybergame.tv
+            ServicePointManager.ServerCertificateValidationCallback += (sender, cert, chain, sslPolicyErrors) =>
+                chain.ChainStatus[0].Status == X509ChainStatusFlags.NoError
+                | ((HttpWebRequest)sender).Address.Authority.EndsWith(".cybergame.tv");
 
             streamTestTimer = new Timer();
             streamTestTimer.Tick += (sender, e) => TestStream();
@@ -42,15 +49,9 @@ namespace anonPoster {
             bool isStreamNow = false;
 
             try {
-                HttpWebRequest request = WebRequest.Create(URLs.mainStream) as HttpWebRequest;
-                request.Method = "HEAD";
-                request.GetResponse();
-                isStreamNow = true;
-            } catch (WebException e) when (e.Status is WebExceptionStatus.ProtocolError && e.Response is HttpWebResponse r) {
-                // If we have 404, it means stream hasn't been started
-                // All is OK. Just skip it
-                if (r.StatusCode != HttpStatusCode.NotFound)
-                    mf.HandleException(e);
+                string response = videoWC.DownloadString(URLs.mainStreamInfo);
+                // Chech of JSON answer contains online":"1
+                isStreamNow = response.IndexOf("online\":\"1") != -1;
             } catch (Exception e) {
                 mf.HandleException(e);
             }

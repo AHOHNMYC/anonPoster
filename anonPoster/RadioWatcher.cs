@@ -64,10 +64,14 @@ namespace anonPoster {
                 }
 
                 StringBuilder trackSb = new StringBuilder();
-                if (d.ContainsKey("Artist"))
+                if (d.ContainsKey("Artist")) {
                     trackSb.Append(d["Artist"]);
-                if (d.ContainsKey("Title"))
-                    trackSb.Append($" — {d["Title"]}");
+                    if (d.ContainsKey("Title"))
+                        trackSb.Append($" — {d["Title"]}");
+                } else {
+                    if (d.ContainsKey("Title"))
+                        trackSb.Append(d["Title"]);
+                }
                 string track = trackSb.ToString();
 
 #if DEBUG

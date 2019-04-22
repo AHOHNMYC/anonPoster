@@ -1,6 +1,7 @@
 ﻿namespace anonPoster {
     static class URLs {
         public const string mainStream      = "https://stream1.cybergame.tv/live/fiuu.m3u8";
+        public const string mainStreamInfo  = "https://api.cybergame.tv/p/statusv2/?channel=fiuu";
         public const string mainStreamRtmp  = "rtmp://stream1.cybergame.tv:2936/live/fiuu";
         public const string bomjStream      = "rtmp://stream1.cybergame.tv:2936/live/thanksyiiifor240p";
         public const string youTube         = "https://www.youtube.com/channel/UCh4B8kA4xl7KS4TTgRHIePA/videos";
@@ -8,6 +9,7 @@
         public const string radio           = "https://anon.fm";
         public const string radioSong       = radio + "/song/";
         public const string radioState      = radio + "/state.txt";
+        public const string radioSched      = radio + "/shed.js";
         public const string radioFeedback   = radio + "/feedback";
 
         public const string audio           = "http://anon.fm:8000";

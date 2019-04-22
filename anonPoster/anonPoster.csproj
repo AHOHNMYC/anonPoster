@@ -73,15 +73,16 @@
     <Compile Include="LastTracksMenu.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="RadioWatcher.cs" />
+    <Compile Include="Schedule.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Schedule.Designer.cs">
+      <DependentUpon>Schedule.cs</DependentUpon>
+    </Compile>
+    <Compile Include="ScheduleWatcher.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="SpellHunspell.cs" />
     <Compile Include="NativeMethods.cs" />
-    <Compile Include="NY.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="NY.Designer.cs">
-      <DependentUpon>NY.cs</DependentUpon>
-    </Compile>
     <Compile Include="Prompt.cs">
       <SubType>Form</SubType>
     </Compile>

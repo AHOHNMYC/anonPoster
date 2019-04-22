@@ -108,6 +108,7 @@
             this.PlayPadioButton.Text = "Звучать";
             this.PlayPadioButton.UseVisualStyleBackColor = true;
             this.PlayPadioButton.MouseClick += new System.Windows.Forms.MouseEventHandler(this.PlayRadioButton_MouseClick);
+            this.PlayPadioButton.TabStop = false;
             // 
             // CaptchaPicture
             // 
@@ -174,10 +175,6 @@
             this.Activated += new System.EventHandler(this.MainForm_Activated);
             this.Load += new System.EventHandler(this.MainForm_Load);
             this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.DragByMouse);
-            this.Shown += new System.EventHandler(this.MainForm_Shown);
-            this.VisibleChanged += new System.EventHandler(this.MainForm_VisibleChanged);
-            this.Move += new System.EventHandler(this.MainForm_Move);
-            this.Resize += new System.EventHandler(this.MainForm_Resize);
             ((System.ComponentModel.ISupportInitialize)(this.CaptchaPicture)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.ResizePicture)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.CoverBox)).EndInit();
