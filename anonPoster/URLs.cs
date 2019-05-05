@@ -1,5 +1,6 @@
 ﻿namespace anonPoster {
     static class URLs {
+        // Backup domain: alcxemuct.accountant
         public const string mainStream      = "https://stream1.cybergame.tv/live/fiuu.m3u8";
         public const string mainStreamInfo  = "https://api.cybergame.tv/p/statusv2/?channel=fiuu";
         public const string mainStreamRtmp  = "rtmp://stream1.cybergame.tv:2936/live/fiuu";

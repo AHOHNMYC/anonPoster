@@ -17,7 +17,7 @@ using MediaFoundation.Misc;
 class CPlayer : COMBase, IMFAsyncCallback {
     #region externs
 
-    [DllImport("user32", CharSet = CharSet.Auto)]
+    [DllImport("User32", CharSet = CharSet.Auto)]
     private extern static int PostMessage(
         IntPtr handle, int msg, IntPtr wParam, IntPtr lParam);
 

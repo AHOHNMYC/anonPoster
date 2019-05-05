@@ -137,6 +137,7 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <None Include="Resources\chmoPackedTree.gz" />
     <None Include="Resources\Listener.ico" />
   </ItemGroup>
   <ItemGroup>
@@ -147,9 +148,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\graceOfGod.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\newYearHat.png" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="MediaFoundation.dll" />

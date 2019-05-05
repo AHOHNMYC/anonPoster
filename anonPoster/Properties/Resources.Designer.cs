@@ -49,19 +49,19 @@
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
-        
+
         internal static System.Drawing.Bitmap graceOfGod {
             get {
                 object obj = ResourceManager.GetObject("graceOfGod", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
-        
-        internal static System.Drawing.Bitmap newYearHat {
+
+        internal static byte[] chmoPackedTree {
             get {
-                object obj = ResourceManager.GetObject("newYearHat", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
+                object obj = ResourceManager.GetObject("chmoPackedTree", resourceCulture);
+                return ((byte[])(obj));
             }
-        }
+        }        
     }
 }
