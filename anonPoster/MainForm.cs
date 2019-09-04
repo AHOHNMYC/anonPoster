@@ -270,7 +270,8 @@ namespace anonPoster {
                     PageText = Encoding.UTF8.GetString(pageBytes);
                 }
 
-                CaptchaID = int.Parse(PageText.Substring(1499, 6));
+                int CaptchaIDPos = PageText.IndexOf(".gif")-6;
+                CaptchaID = int.Parse(PageText.Substring(CaptchaIDPos, 6));
                 ChangeCaptchaImage(URLs.RadioCaptcha(CaptchaID));
             } catch (WebException e) {
                 switch (e.Status) {
@@ -309,7 +310,7 @@ namespace anonPoster {
 #if DEBUG
             Debugger.Break();
 #endif
-            if (e is WebException we && we.Status == WebExceptionStatus.ConnectFailure)
+            if (e is WebException && (e as WebException).Status == WebExceptionStatus.ConnectFailure)
                 ChangeCaptchaImage(Properties.Resources.captchaNoInternet);
             else
                 if (!Properties.Settings.Default.hideErrors)

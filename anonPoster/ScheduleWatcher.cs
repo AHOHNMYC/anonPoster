@@ -60,9 +60,10 @@ namespace anonPoster {
                 foreach (Event e in events)
                     Debugger.Log(5, "", FormatEventString(e));
 #endif
-            } catch (WebException e) when (e.Status is WebExceptionStatus.ProtocolError && e.Response is HttpWebResponse r) {
+            } catch (WebException e) when (e.Status == WebExceptionStatus.ProtocolError && e.Response is HttpWebResponse) {
                 // If we have 404, it means stream hasn't been started
                 // All is OK. Just skip it
+                HttpWebResponse r = e.Response as HttpWebResponse;
                 if (r.StatusCode != HttpStatusCode.NotFound)
                     mf.HandleException(e);
             } catch (Exception e) {
