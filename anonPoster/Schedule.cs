@@ -11,5 +11,12 @@ namespace anonPoster {
         public Schedule() {
             InitializeComponent();
         }
+
+        public void ClearSchedule() {
+            scheduleText.Clear();
+        }
+        public void AddEvent(string eventDescription) {
+            scheduleText.AppendText(eventDescription + '\n');
+        }
     }
 }

@@ -30,6 +30,7 @@ namespace anonPoster {
         public VideoWatcher vw;
         public ScheduleWatcher sw;
         public Streams streamsForm;
+        public Schedule scheduleForm;
         public ToolTip coverTt = new ToolTip { IsBalloon = true };
 
         
@@ -76,9 +77,6 @@ namespace anonPoster {
         }
 
         public void ShowStreamsForm() {
-            if (streamsForm == null) {
-                streamsForm = new Streams(this) { Font = Font, Icon = Icon };
-            }
             streamsForm.TopMost = TopMost;
             streamsForm.ShowDialog();
         }
@@ -338,7 +336,7 @@ namespace anonPoster {
             // Ctrl+Shift+K handler
             if (m.Msg == GlobalHotkey.Constants.WM_HOTKEY_MSG_ID) {
                 //WindowState = FormWindowState.Normal;
-                if (streamsForm == null || !streamsForm.Visible) {
+                if (!streamsForm.Visible) {
                     Visible = true;
                     BringToFront();
                     Activate();
@@ -613,6 +611,10 @@ namespace anonPoster {
                 GodGraceVisualUpdate();
             else
                 ReloadCaptcha();
+
+            // Additional forms
+            streamsForm = new Streams(this) { Font = Font, Icon = Icon };
+            scheduleForm = new Schedule() { Font = Font, Icon = Icon };
 
             // Watchers
             ltm = new LastTracksMenu(this);

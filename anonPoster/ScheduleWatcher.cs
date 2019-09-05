@@ -56,9 +56,21 @@ namespace anonPoster {
 
                 events = ParseJs(pageText);
 #if DEBUG
+/*
                 Debugger.Log(5, "", "Получили расписание:\n");
                 foreach (Event e in events)
                     Debugger.Log(5, "", FormatEventString(e));
+*/
+#endif
+                mf.scheduleForm.ClearSchedule();
+                foreach (Event e in events) {
+                    mf.scheduleForm.AddEvent(FormatEventString(e));
+
+                    if (DateTime.Now > e.Start && DateTime.Now < e.End)
+                        MessageBox.Show(mf, FormatEventString(e), "Прозвенел третий звонок!", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+#if DEBUG
+                mf.scheduleForm.Show(mf);
 #endif
             } catch (WebException e) when (e.Status == WebExceptionStatus.ProtocolError && e.Response is HttpWebResponse) {
                 // If we have 404, it means stream hasn't been started
@@ -133,6 +145,8 @@ namespace anonPoster {
             int deltaCenturies = deltaYears/100;
             int deltaMillenniums = deltaCenturies/10;
 
+            // If unit is zero, we breaks into next switch
+            // Until we reach non-zero unit, that will return some value
             switch (deltaMillenniums) {
                 case 0: break;
                 case 1: return $"{prefix} 1 тысячелетие";
